@@ -85,3 +85,20 @@ packages/apps/MiuiCit/tools/setup-rom.sh device/xiaomi/mondrian/device.mk
 ```
 
 See `settings/README.md`.
+
+
+## Validation
+
+Run the complete static repository audit before building:
+
+```bash
+packages/apps/MiuiCit/tools/audit-repository.sh
+```
+
+For full Xiaomi factory-runtime bring-up, collect the missing stock runtime and SELinux context files from the unpacked HyperOS image:
+
+```sh
+packages/apps/MiuiCit/tools/collect-stock-runtime.sh
+```
+
+This repository intentionally keeps optional factory HALs disabled until their ELF dependencies and enforcing-SELinux domains are verified.

@@ -1,0 +1,15 @@
+# Additional stock inputs useful for full factory/calibration analysis.
+# They are not enabled by the base MiuiCit product integration.
+
+vendor_a/bin/hw/vendor.xiaomi.hardware.misys@3.0-service
+vendor_a/bin/hw/vendor.xiaomi.hardware.misys@4.0-service
+vendor_a/lib64/vendor.xiaomi.hardware.misys@3.0.so
+vendor_a/lib64/vendor.xiaomi.hardware.misys@4.0.so
+vendor_a/lib64/hw/vendor.xiaomi.hardware.misys@3.0-impl.so
+vendor_a/lib64/hw/vendor.xiaomi.hardware.misys@4.0-impl.so
+
+system_a/system/framework/vendor.xiaomi.hardware.misys-V1.0-java.jar
+system_a/system/framework/vendor.xiaomi.hardware.misys-V2.0-java.jar
+system_a/system/framework/vendor.xiaomi.hardware.misys.V3_0.jar
+system_a/system/framework/vendor.xiaomi.hardware.misys-V4.0-java.jar
+system_ext_a/framework/vendor.xiaomi.hardware.misys.common-V1-java.jar

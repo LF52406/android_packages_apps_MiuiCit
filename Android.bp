@@ -1,3 +1,6 @@
+soong_namespace {
+}
+
 android_app_import {
     name: "MiuiCit",
     apk: "prebuilt/MiuiCit.apk",
