@@ -62,3 +62,7 @@ Auxiliary factory/calibration pages depend on Xiaomi CIT Wi-Fi/Bluetooth, CIT se
 No permissive policy and no broad generic `system_app` rules. Collect real AVCs first with `tools/collect-device-validation.sh`, then add only the rules actually required by mondrian.
 
 See `analysis/PORTING_REPORT.md` and `analysis/test_matrix.csv`.
+
+## Baseline status
+
+The original `MiuiCit.apk` is now present and byte-verified. The repository is ready for the first base AOSP build. Optional Xiaomi factory HAL/runtime remains intentionally disabled until device validation.
