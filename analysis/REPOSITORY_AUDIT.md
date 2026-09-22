@@ -72,3 +72,13 @@ Build the base modules first. If the app starts, collect one validation bundle w
 
 For full factory/calibration bring-up, collect the actual stock binaries and stock SELinux contexts with
 `tools/collect-stock-runtime.sh`. The resulting archive is sufficient for ELF dependency analysis and exact service-domain policy work.
+
+
+## Audit correction: display DAC permissions
+
+A second comparison against stock `vendor/etc/init/hw/init.target.rc` found that the base fragment originally carried the CIT/MMI torch permissions but omitted the two display nodes used directly by the mondrian config. This is now corrected:
+
+- `/sys/class/mi_display/disp-DSI-0/disp_param` → `system:system 0664`
+- `/sys/class/mi_display/disp-DSI-0/brightness_clone` → `system:system 0664`
+
+The trigger remains `post-fs-data`, matching stock. This fixes the DAC side of FOD-HBM and brightness-clone access. Enforcing SELinux access is still validated separately from real AVCs.

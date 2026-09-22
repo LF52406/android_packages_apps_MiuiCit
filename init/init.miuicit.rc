@@ -1,5 +1,6 @@
 # MiuiCit device-side setup for mondrian.
-# Limited to behavior verified in the stock init configuration.
+# Limited to behavior verified in the stock HyperOS init.target.rc and to
+# nodes actually referenced by the mondrian CIT configuration.
 
 on post-fs-data
     # Rear flash / torch channels used by CIT and MMI.
@@ -9,12 +10,21 @@ on post-fs-data
     chown system system /sys/class/leds/led:switch_1/brightness
     chown system system /sys/class/leds/led:switch_0/trigger
     chown system system /sys/class/leds/led:switch_1/trigger
+
     chmod 0664 /sys/class/leds/led:torch_0/brightness
     chmod 0664 /sys/class/leds/led:torch_1/brightness
     chmod 0664 /sys/class/leds/led:switch_0/brightness
     chmod 0664 /sys/class/leds/led:switch_1/brightness
     chmod 0664 /sys/class/leds/led:switch_0/trigger
     chmod 0664 /sys/class/leds/led:switch_1/trigger
+
+    # FOD HBM and light-sensor/display tests in cit_param_config.json use
+    # these two Xiaomi display nodes directly. Stock gives them system:system
+    # ownership with mode 0664 at the same post-fs-data stage.
+    chown system system /sys/class/mi_display/disp-DSI-0/disp_param
+    chmod 0664 /sys/class/mi_display/disp-DSI-0/disp_param
+    chown system system /sys/class/mi_display/disp-DSI-0/brightness_clone
+    chmod 0664 /sys/class/mi_display/disp-DSI-0/brightness_clone
 
 # Preserve Xiaomi speaker-calibration file lifecycle used by spkcal.
 on property:vendor.audio.cit.spkcal.copy=true
