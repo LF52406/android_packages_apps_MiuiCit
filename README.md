@@ -66,3 +66,22 @@ See `analysis/PORTING_REPORT.md` and `analysis/test_matrix.csv`.
 ## Baseline status
 
 The original `MiuiCit.apk` is now present and byte-verified. The repository is ready for the first base AOSP build. Optional Xiaomi factory HAL/runtime remains intentionally disabled until device validation.
+
+
+## Settings five-tap integration
+
+The repository also contains a ROM-agnostic AOSP Settings hook. After integration, five consecutive taps on **Kernel version** launch MiuiCit, while `*#*#6484#*#*` remains supported.
+
+Apply it from the ROM root:
+
+```bash
+packages/apps/MiuiCit/tools/apply-settings-integration.sh
+```
+
+Or prepare both product and Settings integration in one step:
+
+```bash
+packages/apps/MiuiCit/tools/setup-rom.sh device/xiaomi/mondrian/device.mk
+```
+
+See `settings/README.md`.
