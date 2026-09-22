@@ -82,3 +82,16 @@ A second comparison against stock `vendor/etc/init/hw/init.target.rc` found that
 - `/sys/class/mi_display/disp-DSI-0/brightness_clone` → `system:system 0664`
 
 The trigger remains `post-fs-data`, matching stock. This fixes the DAC side of FOD-HBM and brightness-clone access. Enforcing SELinux access is still validated separately from real AVCs.
+
+
+## DEX compatibility check against Android 17
+
+The actual `classes.dex` was inspected at method/type-reference level.
+
+- `CitApplication` startup code does not directly link Xiaomi/MIUI framework classes.
+- `HomeActivity` startup code does not directly link Xiaomi/MIUI framework classes.
+- There are no DEX type IDs under `Lmiui/` or `Lvendor/xiaomi/`; Xiaomi framework/HAL selection is performed through strings/reflection/HIDL lookup instead of verifier-time class linkage.
+- Android 17 still contains the checked hidden APIs used by the relevant code paths: `SystemProperties`, `ServiceManager`, `HwBinder`, `AudioSystem.setParameters`, `AudioSystem.setForceUse`, and the checked FingerprintManager methods.
+- `com.android.internal.telephony.Phone.invokeOemRilRequestStrings` is no longer present in the current Lineage 24 telephony source. The APK's direct reference to it is confined to `CitSarMtkAuthenticaTestActivity.invokeOemRilRequestStringsEmPhone`, an MTK-oriented auxiliary SAR-auth path, not the Qualcomm mondrian main startup path. The mondrian Qualcomm path must still be validated through qcril during device testing.
+
+This substantially reduces the risk of an immediate AOSP startup `NoClassDefFoundError`; it does not replace runtime validation of individual factory activities.
