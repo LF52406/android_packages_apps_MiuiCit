@@ -1,0 +1,6 @@
+*.apk binary
+*.so binary
+runtime/generated/** -text
+
+# Preserve Xiaomi's stock CRLF bytes in the device CIT config.
+config/mondrian/cit_param_config.json -text
