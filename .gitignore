@@ -1,0 +1,7 @@
+*.log
+*.tmp
+out/
+.runtime-work/
+runtime/generated/
+.idea/
+.vscode/

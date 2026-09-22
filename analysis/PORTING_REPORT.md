@@ -1,0 +1,45 @@
+# MiuiCit porting report — mondrian
+
+## Confirmed APK baseline
+
+- package: `com.miui.cit`
+- version: `0.4.9-SNAPSHOT` / versionCode `47`
+- minSdk 28; target/compile SDK 33
+- shared UID: `android.uid.system`
+- stock location: `product/app/MiuiCit/MiuiCit.apk`
+- application class: `com.miui.cit.CitApplication`
+- exported receiver: `com.miui.cit.receiver.CitBroadcastReceiver`
+- stock secret code: `6484`
+- direct home action: `com.miui.cit.MAGIC_NUMBER`
+- APK native libs: `libimagepipeline.so`, `libstatic-webp.so`; neither is the factory hardware backend
+- stock APK SHA-256: `145e4d8d8193c0ef7171ca83df1a2d901d413c11a6366a6affa1a8dde8340390`
+
+## Device configuration
+
+The supplied ODM configuration explicitly declares `product: mondrian` and is kept unmodified.
+
+Important backends: FOD HBM `/sys/class/mi_display/disp-DSI-0/disp_param`; light value `/sys/class/mi_display/disp-DSI-0/brightness_clone`; camera IDs rear-main/front/macro/ultrawide `0/1/22/21`; audio routes `speaker_number=bottom/top`; microphone modes `main_ns/top_ns`; qcom-battery `chip_ok`, `authentic`, `battcont_online`, `cc_orientation`; speaker calibration `spkcal -c/-m`; SAR sensor ID `33171015`; NFC/eSE `sn110t`.
+
+## Static dependency findings
+
+The APK references Android hidden/system APIs (`SystemProperties`, `ServiceManager`, `HwBinder`, `AudioSystem`, internal telephony, fingerprint hidden APIs, NFC extras) plus Xiaomi factory interfaces for CIT Wi-Fi/Bluetooth, CIT sensor, sensor communicate, MiSys and MTD.
+
+The stock image contains matching service declarations. The current sm8450-common proprietary tree already supplies `qcrilhook` and `qcrilmsgtunnel`, so they are not duplicated here.
+
+## Bring-up strategy
+
+1. Keep the original APK byte-for-byte as the source prebuilt.
+2. Re-sign it at build time with the ROM platform key.
+3. Install the original mondrian ODM config.
+4. Validate the main tests before optional factory/calibration HALs.
+5. Add optional runtime only for tests that actually need it.
+6. Derive SELinux from real AVCs; never use permissive or broad generic rules.
+
+## Device-validation items
+
+- Android 17 behavior of hidden APIs despite platform signing
+- runtime classpath required by Xiaomi HIDL/AIDL reflection paths
+- active fingerprint-vendor calibration app
+- external Xiaomi CameraTools calibration app
+- exact SELinux/DAC access for display, battery, touch and calibration nodes
+- extra DT_NEEDED dependencies of optional stock factory binaries

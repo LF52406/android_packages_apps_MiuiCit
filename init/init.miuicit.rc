@@ -1,0 +1,41 @@
+# MiuiCit device-side setup for mondrian.
+# Limited to behavior verified in the stock init configuration.
+
+on post-fs-data
+    # Rear flash / torch channels used by CIT and MMI.
+    chown system system /sys/class/leds/led:torch_0/brightness
+    chown system system /sys/class/leds/led:torch_1/brightness
+    chown system system /sys/class/leds/led:switch_0/brightness
+    chown system system /sys/class/leds/led:switch_1/brightness
+    chown system system /sys/class/leds/led:switch_0/trigger
+    chown system system /sys/class/leds/led:switch_1/trigger
+    chmod 0664 /sys/class/leds/led:torch_0/brightness
+    chmod 0664 /sys/class/leds/led:torch_1/brightness
+    chmod 0664 /sys/class/leds/led:switch_0/brightness
+    chmod 0664 /sys/class/leds/led:switch_1/brightness
+    chmod 0664 /sys/class/leds/led:switch_0/trigger
+    chmod 0664 /sys/class/leds/led:switch_1/trigger
+
+# Preserve Xiaomi speaker-calibration file lifecycle used by spkcal.
+on property:vendor.audio.cit.spkcal.copy=true
+    chmod 0600 /mnt/vendor/persist/audio/crus_calr.bin
+    chmod 0600 /mnt/vendor/persist/audio/crus_calr.txt
+    copy /mnt/vendor/persist/audio/crus_calr.bin /mnt/vendor/persist/audio/crus_calr.bin.bak
+    copy /mnt/vendor/persist/audio/crus_calr.txt /mnt/vendor/persist/audio/crus_calr.txt.bak
+    write /mnt/vendor/persist/audio/crus_calr.bin ""
+    write /mnt/vendor/persist/audio/crus_calr.txt ""
+    copy /mnt/vendor/persist/audio/crus_calr.bin.bak /mnt/vendor/persist/audio/crus_calr.bin
+    copy /mnt/vendor/persist/audio/crus_calr.txt.bak /mnt/vendor/persist/audio/crus_calr.txt
+    chmod 0666 /mnt/vendor/persist/audio/crus_calr.bin
+    chmod 0666 /mnt/vendor/persist/audio/crus_calr.txt
+
+    chmod 0600 /mnt/vendor/persist/audio/aw_calr.bin
+    chmod 0600 /mnt/vendor/persist/audio/aw_calr.txt
+    copy /mnt/vendor/persist/audio/aw_calr.bin /mnt/vendor/persist/audio/aw_calr.bin.bak
+    copy /mnt/vendor/persist/audio/aw_calr.txt /mnt/vendor/persist/audio/aw_calr.txt.bak
+    write /mnt/vendor/persist/audio/aw_calr.bin ""
+    write /mnt/vendor/persist/audio/aw_calr.txt ""
+    copy /mnt/vendor/persist/audio/aw_calr.bin.bak /mnt/vendor/persist/audio/aw_calr.bin
+    copy /mnt/vendor/persist/audio/aw_calr.txt.bak /mnt/vendor/persist/audio/aw_calr.txt
+    chmod 0666 /mnt/vendor/persist/audio/aw_calr.bin
+    chmod 0666 /mnt/vendor/persist/audio/aw_calr.txt

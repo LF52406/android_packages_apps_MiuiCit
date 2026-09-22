@@ -1,7 +1,64 @@
-# Xiaomi MiuiCit — AOSP integration
+# Xiaomi MiuiCit — AOSP integration for mondrian
 
-Standalone integration tree for the original HyperOS `com.miui.cit` application used on Xiaomi POCO F5 Pro (`mondrian`).
+Standalone, ROM-agnostic integration tree for Xiaomi HyperOS `com.miui.cit` on POCO F5 Pro (`mondrian`).
 
-This repository is intentionally ROM-agnostic. Expected checkout path: `packages/apps/MiuiCit`.
+The project preserves Xiaomi's original CIT APK/UI/test logic. Device-specific data remains outside the APK, matching stock behavior.
 
-The integration preserves the original Xiaomi CIT UI/test logic and keeps the device configuration outside the APK at `/odm/etc/cit_param_config.json`. The APK must be re-signed with the target ROM platform certificate because its manifest uses `android:sharedUserId="android.uid.system"`.
+## Checkout path
+
+```text
+packages/apps/MiuiCit
+```
+
+## Base integration
+
+- installs `MiuiCit.apk` to `/product/app/MiuiCit/MiuiCit.apk`
+- installs the stock mondrian config to `/odm/etc/cit_param_config.json`
+- installs a small init fragment containing only stock-verified CIT torch/speaker-calibration setup
+- re-signs the APK with the target ROM platform certificate because the manifest uses `android:sharedUserId="android.uid.system"`
+
+## Prepare the APK
+
+```bash
+packages/apps/MiuiCit/tools/import-apk.sh /path/to/MiuiCit.apk
+```
+
+Analyzed stock APK SHA-256:
+
+```text
+145e4d8d8193c0ef7171ca83df1a2d901d413c11a6366a6affa1a8dde8340390
+```
+
+## Product integration
+
+```make
+$(call inherit-product, packages/apps/MiuiCit/miuicit.mk)
+```
+
+Then run:
+
+```bash
+packages/apps/MiuiCit/tools/verify-tree.sh
+```
+
+The current mondrian/sm8450-common vendor setup already supplies `qcrilhook` and `qcrilmsgtunnel`; they are not duplicated here.
+
+## Launch
+
+Secret code: `*#*#6484#*#*`
+
+Direct validation launch:
+
+```bash
+adb shell am start -a com.miui.cit.MAGIC_NUMBER -n com.miui.cit/.home.HomeActivity
+```
+
+## Factory runtime
+
+Auxiliary factory/calibration pages depend on Xiaomi CIT Wi-Fi/Bluetooth, CIT sensor services, sensor communicate, MiSys, MTD and `spkcal`. Stock declarations are preserved under `runtime/reference/`. Main tests are brought up first; optional factory runtime is enabled only after the required blobs are imported and validated.
+
+## SELinux
+
+No permissive policy and no broad generic `system_app` rules. Collect real AVCs first with `tools/collect-device-validation.sh`, then add only the rules actually required by mondrian.
+
+See `analysis/PORTING_REPORT.md` and `analysis/test_matrix.csv`.

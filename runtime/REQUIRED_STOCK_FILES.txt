@@ -1,0 +1,23 @@
+# Paths relative to the unpacked HyperOS EROFS root.
+vendor_a/bin/hw/vendor.xiaomi.cit.wifi@1.0-service
+vendor_a/bin/hw/vendor.xiaomi.cit.bluetooth@1.0-service
+vendor_a/bin/hw/vendor.xiaomi.sensor.citsensorservice@2.0-service
+vendor_a/bin/hw/vendor.xiaomi.sensor.communicate@1.0-service
+vendor_a/bin/hw/vendor.xiaomi.hardware.misys@1.0-service
+vendor_a/bin/hw/vendor.xiaomi.hardware.misys@2.0-service
+vendor_a/bin/mtd@1.3
+vendor_a/lib64/vendor.xiaomi.cit.wifi@1.0.so
+vendor_a/lib64/vendor.xiaomi.cit.bluetooth@1.0.so
+vendor_a/lib64/vendor.xiaomi.sensor.citsensorservice@1.1.so
+vendor_a/lib64/vendor.xiaomi.sensor.citsensorservice@2.0.so
+vendor_a/lib64/vendor.xiaomi.sensor.communicate@1.0.so
+vendor_a/lib64/hw/vendor.xiaomi.sensor.citsensorservice@2.0-impl.so
+vendor_a/lib64/vendor.xiaomi.hardware.misys@1.0.so
+vendor_a/lib64/vendor.xiaomi.hardware.misys@2.0.so
+vendor_a/lib64/hw/vendor.xiaomi.hardware.misys@1.0-impl.so
+vendor_a/lib64/hw/vendor.xiaomi.hardware.misys@2.0-impl.so
+vendor_a/lib64/vendor.xiaomi.hardware.mtdservice@1.0.so
+vendor_a/lib64/vendor.xiaomi.hardware.mtdservice@1.1.so
+vendor_a/lib64/vendor.xiaomi.hardware.mtdservice@1.2.so
+vendor_a/lib64/vendor.xiaomi.hardware.mtdservice@1.3.so
+system_a/system/bin/spkcal
