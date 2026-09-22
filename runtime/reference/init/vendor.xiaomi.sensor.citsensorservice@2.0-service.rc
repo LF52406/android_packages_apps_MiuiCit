@@ -1,0 +1,8 @@
+on boot
+    chown system system /dev/xiaomi_hall
+    chmod 0664 /dev/xiaomi_hall
+
+service citsensor-hal-2-0  /vendor/bin/hw/vendor.xiaomi.sensor.citsensorservice@2.0-service
+    class late_start
+    user system
+    group system input
