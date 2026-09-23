@@ -95,3 +95,10 @@ The actual `classes.dex` was inspected at method/type-reference level.
 - `com.android.internal.telephony.Phone.invokeOemRilRequestStrings` is no longer present in the current Lineage 24 telephony source. The APK's direct reference to it is confined to `CitSarMtkAuthenticaTestActivity.invokeOemRilRequestStringsEmPhone`, an MTK-oriented auxiliary SAR-auth path, not the Qualcomm mondrian main startup path. The mondrian Qualcomm path must still be validated through qcril during device testing.
 
 This substantially reduces the risk of an immediate AOSP startup `NoClassDefFoundError`; it does not replace runtime validation of individual factory activities.
+
+
+## Build-system correction: global Soong namespace
+
+The first full-ROM integration exposed a Make/Soong visibility failure: all three MiuiCit modules were reported as non-existent in PRODUCT_PACKAGES. The standalone repository had an unnecessary `soong_namespace {}` while its export depended on product-make namespace plumbing.
+
+For maximum AOSP ROM portability the repository now stays in the **global Soong namespace**. The explicit namespace block and `PRODUCT_SOONG_NAMESPACES` addition were removed. The module names are unique and can now be resolved directly by PRODUCT_PACKAGES on standard AOSP/Lineage-derived builds.

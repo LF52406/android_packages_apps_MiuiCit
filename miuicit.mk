@@ -1,8 +1,4 @@
 # ROM-agnostic MiuiCit integration.
-MIUICIT_PATH := $(call my-dir)
-
-PRODUCT_SOONG_NAMESPACES += \
-    $(MIUICIT_PATH)
 
 PRODUCT_PACKAGES += \
     MiuiCit \

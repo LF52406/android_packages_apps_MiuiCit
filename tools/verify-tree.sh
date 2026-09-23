@@ -19,10 +19,11 @@ for f in \
     }
 done
 
-grep -q '^soong_namespace' "$REPO/Android.bp" || {
-    echo "Android.bp: soong_namespace is missing" >&2
+if grep -q '^soong_namespace' "$REPO/Android.bp"; then
+    echo "Android.bp: standalone MiuiCit must remain in the global Soong namespace" >&2
     exit 1
-}
+fi
+
 grep -q 'certificate: "platform"' "$REPO/Android.bp" || {
     echo "Android.bp: platform certificate is missing" >&2
     exit 1
