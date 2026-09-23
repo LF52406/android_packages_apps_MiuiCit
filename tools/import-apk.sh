@@ -11,10 +11,28 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 DST="$REPO/prebuilt/MiuiCit.apk"
 EXPECTED="145e4d8d8193c0ef7171ca83df1a2d901d413c11a6366a6affa1a8dde8340390"
 
-[[ -f "$SRC" ]] || { echo "missing APK: $SRC" >&2; exit 1; }
-unzip -tq "$SRC" >/dev/null
-unzip -l "$SRC" | grep -q "classes.dex"
-unzip -l "$SRC" | grep -q "AndroidManifest.xml"
+[[ -f "$SRC" ]] || {
+    echo "missing APK: $SRC" >&2
+    exit 1
+}
+
+unzip -tq "$SRC" >/dev/null || {
+    echo "APK ZIP integrity check failed: $SRC" >&2
+    exit 1
+}
+
+python3 - "$SRC" <<'PY'
+import sys
+import zipfile
+
+apk = sys.argv[1]
+with zipfile.ZipFile(apk) as zf:
+    names = set(zf.namelist())
+
+missing = [name for name in ("classes.dex", "AndroidManifest.xml") if name not in names]
+if missing:
+    raise SystemExit("APK is missing " + ", ".join(missing))
+PY
 
 ACTUAL="$(sha256sum "$SRC" | cut -d" " -f1)"
 if [[ "$ACTUAL" != "$EXPECTED" ]]; then
