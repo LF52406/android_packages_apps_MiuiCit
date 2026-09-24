@@ -102,3 +102,19 @@ packages/apps/MiuiCit/tools/collect-stock-runtime.sh
 ```
 
 This repository intentionally keeps optional factory HALs disabled until their ELF dependencies and enforcing-SELinux domains are verified.
+
+
+## Soong discovery cache
+
+When MiuiCit is cloned into an AOSP tree **after that tree has already been built**, an existing
+`out/.module_paths` finder cache can cause Kati to report all three MiuiCit PRODUCT_PACKAGES
+entries as non-existent even though `Android.bp` is correct.
+
+`tools/setup-rom.sh` now detects this condition and refreshes only the source-module finder cache.
+It does not remove compiled objects or images.
+
+Manual check:
+
+```bash
+packages/apps/MiuiCit/tools/preflight-aosp.sh
+```

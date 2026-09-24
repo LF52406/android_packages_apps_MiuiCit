@@ -102,3 +102,24 @@ This substantially reduces the risk of an immediate AOSP startup `NoClassDefFoun
 The first full-ROM integration exposed a Make/Soong visibility failure: all three MiuiCit modules were reported as non-existent in PRODUCT_PACKAGES. The standalone repository had an unnecessary `soong_namespace {}` while its export depended on product-make namespace plumbing.
 
 For maximum AOSP ROM portability the repository now stays in the **global Soong namespace**. The explicit namespace block and `PRODUCT_SOONG_NAMESPACES` addition were removed. The module names are unique and can now be resolved directly by PRODUCT_PACKAGES on standard AOSP/Lineage-derived builds.
+
+
+## Module-discovery failure mode
+
+The exact Kati error
+
+```text
+includes non-existent modules in PRODUCT_PACKAGES
+MiuiCit
+miuicit_hardware_init
+miuicit_mondrian_config
+```
+
+means Make never received those Soong modules in `ALL_MODULES`. When all three disappear together
+while `Android.bp` is valid, the relevant failure mode is whole-file discovery/export rather than
+an individual module definition.
+
+For ROM trees where MiuiCit is cloned after an earlier build, refresh
+`out/.module_paths/Android.bp.list` / `files.db` so the next Soong invocation rescans the new
+`packages/apps/MiuiCit/Android.bp`. The repository now automates this without deleting normal
+compiled outputs.

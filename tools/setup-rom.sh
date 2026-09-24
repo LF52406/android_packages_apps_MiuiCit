@@ -14,6 +14,11 @@ SETTINGS_DIR="${2:-packages/apps/Settings}"
 "$REPO/tools/apply-product-integration.sh" "$DEVICE_MK"
 "$REPO/tools/apply-settings-integration.sh" "$SETTINGS_DIR"
 
+# If this repo was cloned after the ROM tree had already built once, Soong's
+# module-finder cache may not yet know about the new Android.bp. Refresh only
+# that discovery cache; do not delete compiled outputs.
+"$REPO/tools/refresh-soong-discovery.sh" "$(pwd)"
+
 echo
 echo "MiuiCit ROM integration is ready."
 echo "Review:"
