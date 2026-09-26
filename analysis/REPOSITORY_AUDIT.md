@@ -123,3 +123,22 @@ For ROM trees where MiuiCit is cloned after an earlier build, refresh
 `out/.module_paths/Android.bp.list` / `files.db` so the next Soong invocation rescans the new
 `packages/apps/MiuiCit/Android.bp`. The repository now automates this without deleting normal
 compiled outputs.
+
+
+## Final build-system fix: Kati-native core modules
+
+The previous Soong-global-namespace change was not sufficient for all ROM source trees. The failure
+was at the Kati PRODUCT_PACKAGES existence check: all three MiuiCit modules disappeared together
+from `ALL_MODULES`.
+
+The base integration has therefore been moved from `Android.bp` to `Android.mk`. This is
+intentional, not a rollback in functionality:
+
+- `MiuiCit` remains a platform-signed prebuilt application under product.
+- `miuicit_mondrian_config` remains an ETC prebuilt under `/odm/etc`.
+- `miuicit_hardware_init` remains an ETC prebuilt under `/vendor/etc/init`.
+- PRODUCT_PACKAGES now references modules defined directly in the same Make/Kati layer that performs
+  the existence check.
+
+This removes the Soong namespace/discovery/export path from the three base modules entirely and is
+the portable fix for the observed `non-existent modules in PRODUCT_PACKAGES` failure.

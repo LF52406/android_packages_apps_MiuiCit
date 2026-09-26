@@ -104,17 +104,30 @@ packages/apps/MiuiCit/tools/collect-stock-runtime.sh
 This repository intentionally keeps optional factory HALs disabled until their ELF dependencies and enforcing-SELinux domains are verified.
 
 
-## Soong discovery cache
 
-When MiuiCit is cloned into an AOSP tree **after that tree has already been built**, an existing
-`out/.module_paths` finder cache can cause Kati to report all three MiuiCit PRODUCT_PACKAGES
-entries as non-existent even though `Android.bp` is correct.
+## Build-system integration
 
-`tools/setup-rom.sh` now detects this condition and refreshes only the source-module finder cache.
-It does not remove compiled objects or images.
+The three base modules are intentionally defined in `Android.mk`, not `Android.bp`:
 
-Manual check:
-
-```bash
-packages/apps/MiuiCit/tools/preflight-aosp.sh
+```text
+MiuiCit
+miuicit_mondrian_config
+miuicit_hardware_init
 ```
+
+This is deliberate. AOSP's product-package existence check is performed by Kati. Defining these
+prebuilts directly in Make makes them visible to the same build layer that validates
+`PRODUCT_PACKAGES`, avoiding the whole-file Soong discovery/export failure that previously caused:
+
+```text
+includes non-existent modules in PRODUCT_PACKAGES
+MiuiCit
+miuicit_hardware_init
+miuicit_mondrian_config
+```
+
+The APK is still re-signed with the target ROM platform certificate, installed under `/product/app`,
+the device config is installed to `/odm/etc`, and the init fragment to `/vendor/etc/init`.
+
+If upgrading an older checkout that used `Android.bp`, run `tools/setup-rom.sh` once. It refreshes
+only the module-finder cache and does not remove compiled objects or images.

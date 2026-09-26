@@ -6,38 +6,43 @@ EXPECTED_APK_SHA256="145e4d8d8193c0ef7171ca83df1a2d901d413c11a6366a6affa1a8dde83
 EXPECTED_APK_GIT_BLOB="fae160bb25c17a520c841864e3e127f00f94dbc4"
 EXPECTED_CONFIG_SHA256="45a349999612b6e7e6cdf16c69921d9e02f0d3846dc6712d08d9e0dd549c187f"
 
-for f in \
-    Android.bp \
-    miuicit.mk \
-    prebuilt/MiuiCit.apk \
-    config/mondrian/cit_param_config.json \
-    init/init.miuicit.rc \
-    tools/check-apk-manifest.py; do
+for f in     Android.mk     miuicit.mk     prebuilt/MiuiCit.apk     config/mondrian/cit_param_config.json     init/init.miuicit.rc     tools/check-apk-manifest.py; do
     [[ -f "$REPO/$f" ]] || {
         echo "missing: $f" >&2
         exit 1
     }
 done
 
-if grep -q '^soong_namespace' "$REPO/Android.bp"; then
-    echo "Android.bp: standalone MiuiCit must remain in the global Soong namespace" >&2
+if [[ -f "$REPO/Android.bp" ]]; then
+    echo "Android.bp must not coexist with the Make definitions for core MiuiCit modules" >&2
     exit 1
 fi
 
-grep -q 'certificate: "platform"' "$REPO/Android.bp" || {
-    echo "Android.bp: platform certificate is missing" >&2
+for module in MiuiCit miuicit_mondrian_config miuicit_hardware_init; do
+    grep -q "LOCAL_MODULE := $module" "$REPO/Android.mk" || {
+        echo "Android.mk: missing module $module" >&2
+        exit 1
+    }
+done
+
+grep -q 'LOCAL_CERTIFICATE := platform' "$REPO/Android.mk" || {
+    echo "Android.mk: platform certificate is missing" >&2
     exit 1
 }
-grep -q 'product_specific: true' "$REPO/Android.bp" || {
-    echo "Android.bp: MiuiCit is not product_specific" >&2
+grep -q 'LOCAL_PRODUCT_MODULE := true' "$REPO/Android.mk" || {
+    echo "Android.mk: MiuiCit is not installed to product" >&2
     exit 1
 }
-grep -q 'device_specific: true' "$REPO/Android.bp" || {
-    echo "Android.bp: mondrian config is not device_specific" >&2
+grep -q 'LOCAL_MODULE_PATH := $(TARGET_OUT_ODM_ETC)' "$REPO/Android.mk" || {
+    echo "Android.mk: mondrian config is not installed to odm/etc" >&2
     exit 1
 }
-grep -q '"product"[[:space:]]*:[[:space:]]*"mondrian"' \
-    "$REPO/config/mondrian/cit_param_config.json" || {
+grep -q 'LOCAL_MODULE_PATH := $(TARGET_OUT_VENDOR_ETC)/init' "$REPO/Android.mk" || {
+    echo "Android.mk: init fragment is not installed to vendor/etc/init" >&2
+    exit 1
+}
+
+grep -q '"product"[[:space:]]*:[[:space:]]*"mondrian"'     "$REPO/config/mondrian/cit_param_config.json" || {
     echo "cit_param_config.json: product is not mondrian" >&2
     exit 1
 }
@@ -90,6 +95,7 @@ fi
 python3 "$REPO/tools/check-apk-manifest.py" "$REPO/prebuilt/MiuiCit.apk"
 
 echo "MiuiCit base tree: VERIFIED"
+echo "build backend: Android.mk / Kati-visible prebuilts"
 echo "APK:    $APK_SHA256"
 echo "config: $CONFIG_SHA256"
 
