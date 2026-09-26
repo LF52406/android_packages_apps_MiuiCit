@@ -131,3 +131,24 @@ the device config is installed to `/odm/etc`, and the init fragment to `/vendor/
 
 If upgrading an older checkout that used `Android.bp`, run `tools/setup-rom.sh` once. It refreshes
 only the module-finder cache and does not remove compiled objects or images.
+
+
+## Fresh ROM tree: one-step integration
+
+For the standard mondrian AOSP tree, no arguments are required after cloning this repository to
+`packages/apps/MiuiCit`:
+
+```bash
+packages/apps/MiuiCit/tools/setup-rom.sh
+```
+
+The script defaults to:
+
+```text
+device/xiaomi/mondrian/device.mk
+packages/apps/Settings
+```
+
+It verifies the APK/config, adds the product include, applies the five-tap Settings integration,
+and refreshes only build-discovery cache when necessary. No manual PRODUCT_SOONG_NAMESPACES or
+Android.bp edits are required.

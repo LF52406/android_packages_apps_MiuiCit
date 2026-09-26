@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-    echo "usage: $0 path/to/device.mk [path/to/packages/apps/Settings]" >&2
+if [[ $# -gt 2 ]]; then
+    echo "usage: $0 [path/to/device.mk] [path/to/packages/apps/Settings]" >&2
     exit 2
 fi
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-DEVICE_MK="$1"
+DEVICE_MK="${1:-device/xiaomi/mondrian/device.mk}"
 SETTINGS_DIR="${2:-packages/apps/Settings}"
+
+[[ -f "$DEVICE_MK" ]] || {
+    echo "device makefile not found: $DEVICE_MK" >&2
+    exit 1
+}
+
+[[ -d "$SETTINGS_DIR" ]] || {
+    echo "Settings tree not found: $SETTINGS_DIR" >&2
+    exit 1
+}
 
 "$REPO/tools/verify-tree.sh"
 "$REPO/tools/apply-product-integration.sh" "$DEVICE_MK"
@@ -21,6 +31,9 @@ SETTINGS_DIR="${2:-packages/apps/Settings}"
 
 echo
 echo "MiuiCit ROM integration is ready."
+echo "Device makefile: $DEVICE_MK"
+echo "Settings tree:   $SETTINGS_DIR"
+echo
 echo "Review:"
 echo "  git diff -- $DEVICE_MK"
 echo "  git -C $SETTINGS_DIR diff"
