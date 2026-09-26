@@ -17,6 +17,9 @@ fi
 
 echo "== MiuiCit AOSP preflight =="
 
+python3 "$ROOT/packages/apps/MiuiCit/compat/android17/apply-framework-compat.py" \
+    "$ROOT/frameworks/base" --check
+
 for mod in MiuiCit miuicit_mondrian_config miuicit_hardware_init; do
     grep -q "LOCAL_MODULE := $mod" "$MK" || {
         echo "ERROR: module missing from Android.mk: $mod" >&2

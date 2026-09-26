@@ -152,3 +152,26 @@ packages/apps/Settings
 It verifies the APK/config, adds the product include, applies the five-tap Settings integration,
 and refreshes only build-discovery cache when necessary. No manual PRODUCT_SOONG_NAMESPACES or
 Android.bp edits are required.
+
+
+## Android 17 compatibility fixes
+
+Real device validation found two stock-APK/framework incompatibilities on Android 17:
+
+- `CitKeyBoardCheckActivity` uses the legacy two-argument dynamic receiver registration API and
+  crashes when explicit receiver export flags are enforced.
+- CIT microphone tests call Xiaomi's OEM `AudioRecord.setParameters(String): int`, which is not
+  exposed by AOSP Android 17 even though native AudioRecord still supports per-input parameters.
+
+The stock APK remains byte-for-byte unchanged. `tools/setup-rom.sh` now applies a narrow,
+idempotent framework compatibility patch from `compat/android17/`. The receiver exception is
+limited to `com.miui.cit` running as `SYSTEM_UID`; the AudioRecord bridge preserves per-record
+native semantics rather than using global AudioSystem parameters.
+
+Manual application:
+
+```bash
+packages/apps/MiuiCit/tools/apply-framework-compat.sh
+```
+
+See `compat/android17/README.md`.

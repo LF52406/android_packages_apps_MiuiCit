@@ -6,7 +6,7 @@ EXPECTED_APK_SHA256="145e4d8d8193c0ef7171ca83df1a2d901d413c11a6366a6affa1a8dde83
 EXPECTED_APK_GIT_BLOB="fae160bb25c17a520c841864e3e127f00f94dbc4"
 EXPECTED_CONFIG_SHA256="45a349999612b6e7e6cdf16c69921d9e02f0d3846dc6712d08d9e0dd549c187f"
 
-for f in     Android.mk     miuicit.mk     prebuilt/MiuiCit.apk     config/mondrian/cit_param_config.json     init/init.miuicit.rc     tools/check-apk-manifest.py; do
+for f in     Android.mk     miuicit.mk     prebuilt/MiuiCit.apk     config/mondrian/cit_param_config.json     init/init.miuicit.rc     tools/check-apk-manifest.py     tools/apply-framework-compat.sh     compat/android17/apply-framework-compat.py; do
     [[ -f "$REPO/$f" ]] || {
         echo "missing: $f" >&2
         exit 1
