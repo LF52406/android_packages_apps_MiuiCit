@@ -4,6 +4,7 @@ import argparse
 import sys
 
 MARKER = "MiuiCit kernel tap integration"
+MIST_MARKER = "MiuiCit Mist kernel tap integration"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("settings_dir", nargs="?", default="packages/apps/Settings")
@@ -28,7 +29,7 @@ if not helper.is_file():
 else:
     text = helper.read_text()
     for needle in (
-        'REQUIRED_TAPS = 5',
+        "REQUIRED_TAPS = 5",
         'CIT_PACKAGE = "com.miui.cit"',
         'CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity"',
     ):
@@ -36,28 +37,30 @@ else:
             errors.append(f"helper missing: {needle}")
 
 if mist_hyper.is_file():
-    htext = mist_hyper.read_text()
-    if "MiuiCit Mist kernel tap integration" not in htext:
+    text = mist_hyper.read_text()
+    if MIST_MARKER not in text:
         errors.append("MistOS HyperPreference kernel tap is not patched")
-    if "CitKernelTapLauncher.onKernelVersionTap(context);" not in htext:
+    if "CitKernelTapLauncher.onKernelVersionTap(context);" not in text:
         errors.append("MistOS HyperPreference CIT launcher call is missing")
-
-if modern.is_file():
-    text = modern.read_text()
-    if MARKER not in text:
-        errors.append("modern kernel controller is not patched")
-    if catalyst.is_file():
-        ktext = catalyst.read_text()
-        if MARKER not in ktext:
-            errors.append("Catalyst kernel binding is not patched")
-        if "preference.isSelectable = true" not in ktext:
-            errors.append("Catalyst kernel preference is not selectable")
-elif legacy.is_file():
-    text = legacy.read_text()
-    if MARKER not in text:
-        errors.append("legacy kernel controller is not patched")
 else:
-    errors.append("no supported kernel controller exists")
+    if modern.is_file():
+        text = modern.read_text()
+        if MARKER not in text:
+            errors.append("modern kernel controller is not patched")
+        if text.count("public boolean handlePreferenceTreeClick(Preference preference)") > 1:
+            errors.append("modern kernel controller has duplicate click handlers")
+        if catalyst.is_file():
+            ktext = catalyst.read_text()
+            if MARKER not in ktext:
+                errors.append("Catalyst kernel binding is not patched")
+            if "preference.isSelectable = true" not in ktext:
+                errors.append("Catalyst kernel preference is not selectable")
+    elif legacy.is_file():
+        text = legacy.read_text()
+        if MARKER not in text:
+            errors.append("legacy kernel controller is not patched")
+    else:
+        errors.append("no supported kernel click handler exists")
 
 if errors:
     for error in errors:

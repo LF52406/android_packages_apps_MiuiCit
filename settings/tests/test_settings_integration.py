@@ -7,7 +7,6 @@ from pathlib import Path
 import tempfile
 import unittest
 
-
 REPO = Path(__file__).resolve().parents[2]
 APPLY = REPO / "settings" / "apply-settings-integration.py"
 CHECK = REPO / "settings" / "check-settings-integration.py"
@@ -17,12 +16,9 @@ MODERN = Path(
     "KernelVersionPreferenceController.java"
 )
 CATALYST = Path(
-    "src/com/android/settings/deviceinfo/firmwareversion/"
-    "KernelVersionPreference.kt"
+    "src/com/android/settings/deviceinfo/firmwareversion/KernelVersionPreference.kt"
 )
-LEGACY = Path(
-    "src/com/android/settings/deviceinfo/KernelVersionPreferenceController.java"
-)
+LEGACY = Path("src/com/android/settings/deviceinfo/KernelVersionPreferenceController.java")
 MIST_HYPER = Path("src/com/mist/utils/HyperPreference.java")
 
 
@@ -42,150 +38,56 @@ def run(script: Path, root: Path, check: bool = True):
     )
 
 
-class SettingsIntegrationTest(unittest.TestCase):
-    def test_modern_and_catalyst_are_patched_and_idempotent(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write(
-                root,
-                MODERN,
-                """package com.android.settings.deviceinfo.firmwareversion;
-
+def modern_fixture(existing_handler: bool = False) -> str:
+    handler = """
+    @Override
+    public boolean handlePreferenceTreeClick(Preference preference) {
+        preference.setSummary("full kernel");
+        return false;
+    }
+""" if existing_handler else ""
+    pref_import = "import androidx.preference.Preference;\n" if existing_handler else ""
+    return f"""package com.android.settings.deviceinfo.firmwareversion;
 import android.content.Context;
-
-import com.android.settings.core.BasePreferenceController;
+{pref_import}import com.android.settings.core.BasePreferenceController;
 import com.android.settingslib.DeviceInfoUtils;
-
-// LINT.IfChange
-public class KernelVersionPreferenceController extends BasePreferenceController {
-    public KernelVersionPreferenceController(Context context, String preferenceKey) {
+public class KernelVersionPreferenceController extends BasePreferenceController {{
+    public KernelVersionPreferenceController(Context context, String preferenceKey) {{
         super(context, preferenceKey);
-    }
-
+    }}
     @Override
-    public int getAvailabilityStatus() {
-        return AVAILABLE;
-    }
-
-    @Override
-    public CharSequence getSummary() {
+    public CharSequence getSummary() {{
         return DeviceInfoUtils.getFormattedKernelVersion(mContext);
-    }
-}
-// LINT.ThenChange(KernelVersionPreference.kt)
-""",
-            )
-            write(
-                root,
-                CATALYST,
-                """package com.android.settings.deviceinfo.firmwareversion
+    }}
+{handler}}}
+"""
 
+
+def catalyst_fixture() -> str:
+    return """package com.android.settings.deviceinfo.firmwareversion
 import android.content.Context
 import androidx.preference.Preference
 import com.android.settings.R
 import com.android.settingslib.metadata.PreferenceMetadata
 import com.android.settingslib.preference.PreferenceBinding
-
 class KernelVersionPreference : PreferenceMetadata, PreferenceBinding {
-    override val key: String
-        get() = "kernel_version"
-
+    override val key: String get() = "kernel_version"
     override fun bind(preference: Preference, metadata: PreferenceMetadata) {
         super.bind(preference, metadata)
         preference.isSelectable = false
         preference.isCopyingEnabled = true
     }
 }
-""",
-            )
+"""
 
-            first = run(APPLY, root)
-            self.assertIn("MiuiCit Settings integration: OK", first.stdout)
-            run(CHECK, root)
 
-            modern = (root / MODERN).read_text()
-            catalyst = (root / CATALYST).read_text()
-
-            self.assertIn("CitKernelTapLauncher.onKernelVersionTap", modern)
-            self.assertIn("preference.setSelectable(true)", modern)
-            self.assertIn("preference.isSelectable = true", catalyst)
-            self.assertIn("setOnPreferenceClickListener", catalyst)
-
-            before = {
-                MODERN: (root / MODERN).read_bytes(),
-                CATALYST: (root / CATALYST).read_bytes(),
-            }
-            second = run(APPLY, root)
-            self.assertIn("already applied; no changes", second.stdout)
-            self.assertEqual(before[MODERN], (root / MODERN).read_bytes())
-            self.assertEqual(before[CATALYST], (root / CATALYST).read_bytes())
-
-    def test_existing_handler_is_extended_not_duplicated(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write(
-                root,
-                MODERN,
-                """package com.android.settings.deviceinfo.firmwareversion;
-
-import android.content.Context;
-import androidx.preference.Preference;
-import com.android.settings.core.BasePreferenceController;
-
-public class KernelVersionPreferenceController extends BasePreferenceController {
-    public KernelVersionPreferenceController(Context context, String preferenceKey) {
-        super(context, preferenceKey);
-    }
-
-    @Override
-    public boolean handlePreferenceTreeClick(Preference preference) {
-        if (!getPreferenceKey().equals(preference.getKey())) {
-            return false;
-        }
-        preference.setSummary("full kernel");
-        return false;
-    }
-}
-""",
-            )
-
-            run(APPLY, root)
-            text = (root / MODERN).read_text()
-            self.assertEqual(
-                text.count("public boolean handlePreferenceTreeClick(Preference preference)"),
-                1,
-            )
-            self.assertIn("CitKernelTapLauncher.onKernelVersionTap(mContext);", text)
-            self.assertIn('preference.setSummary("full kernel");', text)
-
-    def test_mistos_hyper_preference_kernel_view_is_patched(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write(
-                root,
-                MODERN,
-                """package com.android.settings.deviceinfo.firmwareversion;
-import android.content.Context;
-import com.android.settings.core.BasePreferenceController;
-public class KernelVersionPreferenceController extends BasePreferenceController {
-    public KernelVersionPreferenceController(Context context, String preferenceKey) {
-        super(context, preferenceKey);
-    }
-}
-""",
-            )
-            write(
-                root,
-                MIST_HYPER,
-                """package com.mist.utils;
-
+def mist_fixture() -> str:
+    return """package com.mist.utils;
 import android.content.Context;
 import android.view.View;
 import com.android.settings.R;
-
 public class HyperPreference {
     private Context context;
-
     void bind(android.widget.TextView kernel) {
         kernel.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -195,18 +97,66 @@ public class HyperPreference {
         });
     }
 }
-""",
-            )
+"""
 
+
+class SettingsIntegrationTest(unittest.TestCase):
+    def test_modern_and_catalyst_are_patched_and_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MODERN, modern_fixture())
+            write(root, CATALYST, catalyst_fixture())
+            first = run(APPLY, root)
+            self.assertIn("modern AOSP/Lineage Settings", first.stdout)
+            run(CHECK, root)
+            modern = (root / MODERN).read_text()
+            catalyst = (root / CATALYST).read_text()
+            self.assertIn("CitKernelTapLauncher.onKernelVersionTap", modern)
+            self.assertIn("preference.setSelectable(true)", modern)
+            self.assertIn("preference.isSelectable = true", catalyst)
+            self.assertIn("setOnPreferenceClickListener", catalyst)
+            before = ((root / MODERN).read_bytes(), (root / CATALYST).read_bytes())
+            second = run(APPLY, root)
+            self.assertIn("already applied; no changes", second.stdout)
+            self.assertEqual(before[0], (root / MODERN).read_bytes())
+            self.assertEqual(before[1], (root / CATALYST).read_bytes())
+
+    def test_existing_handler_is_extended_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MODERN, modern_fixture(existing_handler=True))
             run(APPLY, root)
-            text = (root / MIST_HYPER).read_text()
-            self.assertIn(
-                "import com.android.settings.deviceinfo.CitKernelTapLauncher;",
-                text,
+            run(CHECK, root)
+            text = (root / MODERN).read_text()
+            self.assertEqual(
+                text.count("public boolean handlePreferenceTreeClick(Preference preference)"),
+                1,
             )
-            self.assertIn("MiuiCit Mist kernel tap integration", text)
-            self.assertIn("CitKernelTapLauncher.onKernelVersionTap(context);", text)
-            self.assertIn('kernel.setText("full");', text)
+            self.assertIn("CitKernelTapLauncher.onKernelVersionTap(mContext);", text)
+            self.assertIn('preference.setSummary("full kernel");', text)
+
+    def test_mistos_patches_only_real_hyperpreference_click_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MIST_HYPER, mist_fixture())
+            write(root, MODERN, modern_fixture(existing_handler=True))
+            write(root, CATALYST, catalyst_fixture())
+            modern_before = (root / MODERN).read_bytes()
+            catalyst_before = (root / CATALYST).read_bytes()
+
+            first = run(APPLY, root)
+            self.assertIn("MistOS HyperPreference", first.stdout)
+            run(CHECK, root)
+
+            hyper = (root / MIST_HYPER).read_text()
+            self.assertIn("MiuiCit Mist kernel tap integration", hyper)
+            self.assertIn("CitKernelTapLauncher.onKernelVersionTap(context);", hyper)
+            self.assertIn('kernel.setText("full");', hyper)
+            self.assertEqual(modern_before, (root / MODERN).read_bytes())
+            self.assertEqual(catalyst_before, (root / CATALYST).read_bytes())
+
+            second = run(APPLY, root)
+            self.assertIn("already applied; no changes", second.stdout)
 
     def test_legacy_controller_is_supported(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -215,35 +165,25 @@ public class HyperPreference {
                 root,
                 LEGACY,
                 """package com.android.settings.deviceinfo;
-
 import android.content.Context;
 import androidx.preference.Preference;
 import com.android.settings.core.PreferenceControllerMixin;
 import com.android.settingslib.DeviceInfoUtils;
 import com.android.settingslib.core.AbstractPreferenceController;
-
 public class KernelVersionPreferenceController
         extends AbstractPreferenceController implements PreferenceControllerMixin {
     private static final String KEY_KERNEL_VERSION = "kernel_version";
-
-    public KernelVersionPreferenceController(Context context) {
-        super(context);
-    }
-
+    public KernelVersionPreferenceController(Context context) { super(context); }
     @Override
     public void updateState(Preference preference) {
         super.updateState(preference);
         preference.setSummary(DeviceInfoUtils.getFormattedKernelVersion(mContext));
     }
-
     @Override
-    public String getPreferenceKey() {
-        return KEY_KERNEL_VERSION;
-    }
+    public String getPreferenceKey() { return KEY_KERNEL_VERSION; }
 }
 """,
             )
-
             run(APPLY, root)
             run(CHECK, root)
             text = (root / LEGACY).read_text()
@@ -254,10 +194,7 @@ public class KernelVersionPreferenceController
         with tempfile.TemporaryDirectory() as tmp:
             result = run(APPLY, Path(tmp), check=False)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn(
-                "no supported KernelVersionPreferenceController found",
-                result.stderr,
-            )
+            self.assertIn("no supported MistOS, modern, or legacy", result.stderr)
 
 
 if __name__ == "__main__":
