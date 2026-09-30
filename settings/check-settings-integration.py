@@ -19,6 +19,7 @@ catalyst = root / (
     "src/com/android/settings/deviceinfo/firmwareversion/KernelVersionPreference.kt"
 )
 legacy = root / "src/com/android/settings/deviceinfo/KernelVersionPreferenceController.java"
+mist_hyper = root / "src/com/mist/utils/HyperPreference.java"
 
 errors = []
 
@@ -33,6 +34,13 @@ else:
     ):
         if needle not in text:
             errors.append(f"helper missing: {needle}")
+
+if mist_hyper.is_file():
+    htext = mist_hyper.read_text()
+    if "MiuiCit Mist kernel tap integration" not in htext:
+        errors.append("MistOS HyperPreference kernel tap is not patched")
+    if "CitKernelTapLauncher.onKernelVersionTap(context);" not in htext:
+        errors.append("MistOS HyperPreference CIT launcher call is missing")
 
 if modern.is_file():
     text = modern.read_text()

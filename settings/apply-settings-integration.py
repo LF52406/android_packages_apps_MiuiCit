@@ -18,6 +18,7 @@ import shutil
 import sys
 
 MARKER = "MiuiCit kernel tap integration"
+MIST_MARKER = "MiuiCit Mist kernel tap integration"
 
 MODERN_CONTROLLER = Path(
     "src/com/android/settings/deviceinfo/firmwareversion/"
@@ -32,6 +33,7 @@ LEGACY_CONTROLLER = Path(
 HELPER_DEST = Path(
     "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java"
 )
+MIST_HYPER_PREFERENCE = Path("src/com/mist/utils/HyperPreference.java")
 
 
 def die(message: str) -> None:
@@ -70,10 +72,22 @@ def patch_modern_controller(path: Path) -> bool:
         return False
 
     text = add_java_import(text, "import androidx.preference.Preference;")
-    text = add_java_import(text, "import androidx.preference.PreferenceScreen;")
     text = add_java_import(
         text, "import com.android.settings.deviceinfo.CitKernelTapLauncher;"
     )
+
+    existing_handler = "    public boolean handlePreferenceTreeClick(Preference preference) {\n"
+    if existing_handler in text:
+        hook = f"""        // {MARKER}
+        if (getPreferenceKey().equals(preference.getKey())) {{
+            CitKernelTapLauncher.onKernelVersionTap(mContext);
+        }}
+"""
+        text = text.replace(existing_handler, existing_handler + hook, 1)
+        path.write_text(text)
+        return True
+
+    text = add_java_import(text, "import androidx.preference.PreferenceScreen;")
 
     block = f"""
     // {MARKER}
@@ -99,6 +113,34 @@ def patch_modern_controller(path: Path) -> bool:
     path.write_text(text)
     return True
 
+
+def patch_mist_hyper_preference(path: Path) -> bool:
+    if not path.exists():
+        return False
+
+    text = path.read_text()
+    if MIST_MARKER in text:
+        return False
+
+    text = add_java_import(
+        text, "import com.android.settings.deviceinfo.CitKernelTapLauncher;"
+    )
+
+    anchor = """        kernel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+"""
+    if anchor not in text:
+        die(f"cannot locate MistOS kernel click listener: {path}")
+
+    hook = (
+        anchor
+        + f"                // {MIST_MARKER}\n"
+        + "                CitKernelTapLauncher.onKernelVersionTap(context);\n"
+    )
+    text = text.replace(anchor, hook, 1)
+    path.write_text(text)
+    return True
 
 def patch_catalyst_binding(path: Path) -> bool:
     if not path.exists():
@@ -206,6 +248,11 @@ def main() -> int:
     legacy = settings / LEGACY_CONTROLLER
 
     changed = []
+
+    mist_hyper = settings / MIST_HYPER_PREFERENCE
+    if patch_mist_hyper_preference(mist_hyper):
+        changed.append(str(MIST_HYPER_PREFERENCE))
+
     if modern.is_file():
         if patch_modern_controller(modern):
             changed.append(str(MODERN_CONTROLLER))
