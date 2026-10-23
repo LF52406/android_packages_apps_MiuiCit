@@ -186,9 +186,44 @@ class SettingsIntegrationTest(unittest.TestCase):
             self.assertIn("REQUIRED_INLINE_TAPS = REQUIRED_TAPS - 1", helper)
             self.assertIn("kernel.setText(fullKernelVersion);", helper)
             self.assertNotIn("AlertDialog", helper)
+            self.assertFalse(
+                any(
+                    " \t" in line[:len(line) - len(line.lstrip(" \t"))]
+                    for line in text.splitlines()
+                    if "MiuiCit Mist kernel tap integration" in line
+                    or "installMistKernelTapListener(" in line
+                ),
+                "Generated Java lines contain space-before-tab indentation",
+            )
             before = (root / MIST_HYPER).read_bytes()
             run(APPLY, root)
             self.assertEqual(before, (root / MIST_HYPER).read_bytes())
+
+
+    def test_mistos_reapply_repairs_previously_generated_mixed_indent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MIST_HYPER, mist_fixture())
+            run(APPLY, root)
+            destination = root / MIST_HYPER
+            clean = destination.read_text()
+            old = clean.replace(
+                "        // MiuiCit Mist kernel tap integration",
+                "    \t// MiuiCit Mist kernel tap integration",
+                1,
+            ).replace(
+                "        CitKernelTapLauncher.installMistKernelTapListener(",
+                "    \tCitKernelTapLauncher.installMistKernelTapListener(",
+                1,
+            )
+            self.assertNotEqual(clean, old)
+            destination.write_text(old)
+            repaired = run(APPLY, root)
+            self.assertIn("patched:", repaired.stdout)
+            run(CHECK, root)
+            self.assertEqual(destination.read_text(), clean)
+            again = run(APPLY, root)
+            self.assertIn("already applied; no changes", again.stdout)
 
     def test_mistos_upgrades_existing_dialog_listener_without_duplicates(self):
         with tempfile.TemporaryDirectory() as tmp:

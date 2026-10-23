@@ -74,6 +74,21 @@ def patch_mist_hyper_preference(path: Path) -> bool:
             and "CitKernelTapLauncher.showKernelDetails(" not in text
             and "kernel.setOnClickListener(new View.OnClickListener()" not in text
         ):
+            # An earlier installer copied MistOS's mixed space/tab indentation.
+            # Normalize only the two generated lines, leaving surrounding
+            # original Settings formatting and behavior untouched.
+            repaired_lines = []
+            for line in text.splitlines(keepends=True):
+                stripped = line.lstrip(" \t")
+                if stripped.startswith(f"// {MIST_MARKER}") or stripped.startswith(hook):
+                    prefix = line[:len(line) - len(stripped)]
+                    if " \t" in prefix:
+                        line = prefix.expandtabs(4) + stripped
+                repaired_lines.append(line)
+            cleaned = "".join(repaired_lines)
+            if cleaned != text:
+                path.write_text(cleaned)
+                return True
             return False
         die(f"duplicate or mixed MistOS MiuiCit integration: {path}")
 
@@ -111,7 +126,9 @@ def patch_mist_hyper_preference(path: Path) -> bool:
     ):
         die(f"unrecognized MistOS kernel listener: {path}")
 
-    indent = match.group("indent")
+    # Preserve the visual indentation level, without copying invalid
+    # space-before-tab prefixes into the newly inserted source lines.
+    indent = match.group("indent").expandtabs(4)
     new_listener = (
         f"{indent}// {MIST_MARKER}\n"
         f"{indent}{hook}\n"
