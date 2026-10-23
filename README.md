@@ -70,7 +70,7 @@ The original `MiuiCit.apk` is now present and byte-verified. The repository is r
 
 ## Settings six-tap integration
 
-The repository also contains a ROM-agnostic AOSP Settings hook. After integration, six consecutive taps on **Kernel version** launch MiuiCit, while `*#*#6484#*#*` remains supported.
+The repository also contains a ROM-agnostic Settings hook. On MistOS, the first tap on **Kernel version** opens the full details dialog; five additional taps inside it launch MiuiCit. On other Settings implementations, six taps on the kernel preference launch MiuiCit. The `*#*#6484#*#*` remains supported.
 
 Apply it from the ROM root:
 

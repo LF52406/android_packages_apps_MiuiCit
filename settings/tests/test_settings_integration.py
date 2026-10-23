@@ -150,7 +150,7 @@ class SettingsIntegrationTest(unittest.TestCase):
 
             hyper = (root / MIST_HYPER).read_text()
             self.assertIn("MiuiCit Mist kernel tap integration", hyper)
-            self.assertIn("CitKernelTapLauncher.onKernelVersionTap(context);", hyper)
+            self.assertIn("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());", hyper)
             self.assertIn('kernel.setText("full");', hyper)
             self.assertEqual(modern_before, (root / MODERN).read_bytes())
             self.assertEqual(catalyst_before, (root / CATALYST).read_bytes())
@@ -169,19 +169,44 @@ class SettingsIntegrationTest(unittest.TestCase):
             run(APPLY, root)
             run(CHECK, root)
             text = (root / MIST_HYPER).read_text()
-            self.assertEqual(text.count("CitKernelTapLauncher.onKernelVersionTap(context);"), 1)
+            self.assertEqual(text.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"), 1)
             self.assertIn('kernel.setText("full");', text)
             self.assertLess(
-                text.index("CitKernelTapLauncher.onKernelVersionTap(context);"),
+                text.index("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"),
                 text.index('kernel.setText("full");'),
             )
             self.assertEqual(
                 (root / "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java")
-                .read_text().count("REQUIRED_TAPS = 6"), 1,
+                .read_text().count("REQUIRED_DIALOG_TAPS = 5"), 1,
             )
             before = (root / MIST_HYPER).read_bytes()
             run(APPLY, root)
             self.assertEqual(before, (root / MIST_HYPER).read_bytes())
+
+    def test_mistos_upgrades_previous_inline_counter_to_dialog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MIST_HYPER, mist_fixture())
+            run(APPLY, root)
+            target = root / MIST_HYPER
+            old = target.read_text().replace(
+                "CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());",
+                "CitKernelTapLauncher.onKernelVersionTap(context);",
+                1,
+            )
+            target.write_text(old)
+            run(APPLY, root)
+            run(CHECK, root)
+            current = target.read_text()
+            self.assertEqual(current.count("MiuiCit Mist kernel tap integration"), 1)
+            self.assertEqual(
+                current.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"),
+                1,
+            )
+            self.assertNotIn("CitKernelTapLauncher.onKernelVersionTap(context);", current)
+            self.assertIn('kernel.setText("full");', current)
+            second = run(APPLY, root)
+            self.assertIn("already applied; no changes", second.stdout)
 
     def test_legacy_controller_is_supported(self):
         with tempfile.TemporaryDirectory() as tmp:

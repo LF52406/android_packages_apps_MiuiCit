@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply MiuiCit five-tap integration to AOSP-derived Settings trees.
+"""Apply MiuiCit kernel details integration to AOSP-derived Settings trees.
 
 MistOS is handled first because its About-phone UI uses com.mist.utils.HyperPreference
 and does not dispatch the visible kernel-version click through the standard controller.
@@ -61,13 +61,24 @@ def insert_before_class_end(text: str, block: str) -> str:
 
 def patch_mist_hyper_preference(path: Path) -> bool:
     text = path.read_text()
+    old_hook = "CitKernelTapLauncher.onKernelVersionTap(context);"
+    new_hook = (
+        "CitKernelTapLauncher.showKernelDetails("
+        "context, SystemInfoUtils.getFullKernelVersion());"
+    )
+
     if MIST_MARKER in text:
         if text.count(MIST_MARKER) != 1:
             die(f"duplicate MistOS MiuiCit hook: {path}")
-        return False
+        if text.count(new_hook) == 1 and old_hook not in text:
+            return False
+        if text.count(old_hook) == 1 and new_hook not in text:
+            # Upgrade an existing inline counter without introducing another listener.
+            path.write_text(text.replace(old_hook, new_hook, 1))
+            return True
+        die(f"unrecognized MistOS MiuiCit hook: {path}")
 
-    # MistOS uses mixed tabs/spaces before the visible kernel listener.
-    # Keep the existing formatted/full-kernel toggle; add only the CIT counter.
+    # The real MistOS kernel TextView uses mixed indentation in Android 17.
     anchor = re.compile(
         r"(?m)^(?P<indent>[ \t]*)kernel\.setOnClickListener\(new View\.OnClickListener\(\) \{[ \t]*\r?\n"
         r"[ \t]*@Override[ \t]*\r?\n"
@@ -76,7 +87,7 @@ def patch_mist_hyper_preference(path: Path) -> bool:
     matches = list(anchor.finditer(text))
     if len(matches) != 1:
         die(f"expected one MistOS kernel click listener, found {len(matches)}: {path}")
-    if "CitKernelTapLauncher.onKernelVersionTap" in text:
+    if "CitKernelTapLauncher." in text:
         die(f"unrecognized existing MiuiCit hook: {path}")
 
     text = add_java_import(
@@ -89,10 +100,12 @@ def patch_mist_hyper_preference(path: Path) -> bool:
     replacement = (
         match.group(0)
         + f"{indent}// {MIST_MARKER}\n"
-        + f"{indent}CitKernelTapLauncher.onKernelVersionTap(context);\n"
+        + f"{indent}{new_hook}\n"
     )
     path.write_text(text[:match.start()] + replacement + text[match.end():])
     return True
+
+
 
 def patch_modern_controller(path: Path) -> bool:
     text = path.read_text()

@@ -1,25 +1,17 @@
-# Settings integration — six taps on Kernel version
+# Settings integration — MiuiCit via kernel details (MistOS)
 
-This integration reproduces the Xiaomi-style entry path without tying MiuiCit to a specific ROM.
+On MistOS Android 17, the first tap on Kernel version opens a dialog showing the full
+kernel version. Five additional taps on the information inside the open dialog
+launch MiuiCit (six total taps). Closing the dialog resets the count; pauses over
+three seconds between dialog taps also reset it. MistOS's existing short/full kernel
+version toggle in the About screen is preserved.
 
-User flow:
-
-```text
-Settings
-  → About phone
-  → Android version / firmware details
-  → Kernel version
-  → tap 6 times
-  → com.miui.cit/.home.HomeActivity
-```
-
-The MistOS About phone kernel row retains its original first-tap formatted/full-version toggle; the counter does not consume or replace that behavior.
-
-The original secret code `*#*#6484#*#*` remains a second entry path.
+Other ROMs with the standard kernel-version preference retain six direct taps
+on that preference. The secret code `*#*#6484#*#*` is unchanged.
 
 ## Why a Settings source hook is required
 
-A resource overlay cannot reliably implement "five taps on an existing Preference" across AOSP-derived ROMs. The click counter therefore lives in a tiny Settings helper and the existing kernel-version controller/binding delegates to it.
+A resource overlay cannot reliably implement "five taps inside the kernel-details dialog" across AOSP-derived ROMs. The click counter therefore lives in a tiny Settings helper and the existing kernel-version controller/binding delegates to it.
 
 There is deliberately **no compile-time dependency** from Settings to MiuiCit. The launcher uses the explicit component name as strings. This keeps Settings buildable on ROM variants where the app is temporarily omitted.
 
@@ -31,11 +23,12 @@ From the ROM root, with this repository checked out at `packages/apps/MiuiCit`:
 packages/apps/MiuiCit/tools/apply-settings-integration.sh
 ```
 
-The patcher is idempotent.
+The patcher is idempotent; it also upgrades the previously inserted MistOS inline counter.
 
 It supports:
 
-1. Current AOSP/Lineage-style `deviceinfo/firmwareversion/KernelVersionPreferenceController.java`.
+1. MistOS Android 17 `com.mist.utils.HyperPreference`.
+2. Current AOSP/Lineage-style `deviceinfo/firmwareversion/KernelVersionPreferenceController.java`.
 2. Current Catalyst `KernelVersionPreference.kt` when present.
 3. The older `deviceinfo/KernelVersionPreferenceController.java` layout as a fallback.
 
@@ -43,11 +36,11 @@ If a ROM has replaced the AOSP kernel-version screen with a completely different
 
 ## Behavior
 
-- six consecutive taps are required;
-- a gap longer than 3 seconds resets the sequence;
-- no toast or visible intermediate UI is shown;
-- the sixth tap launches the exported MiuiCit home activity explicitly;
-- if MiuiCit is missing, Settings does not crash; the failed launch is only logged.
+- MistOS: first tap opens the full kernel information dialog; five more taps within it launch MiuiCit.
+- Other ROMs: six consecutive kernel preference taps launch MiuiCit.
+- A gap over 3 seconds resets the active tap sequence.
+- Closing the MistOS dialog cancels its count.
+- Missing MiuiCit is logged without crashing Settings.
 
 ## One-command ROM setup
 

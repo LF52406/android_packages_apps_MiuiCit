@@ -30,6 +30,8 @@ else:
     text = helper.read_text()
     for needle in (
         "REQUIRED_TAPS = 6",
+        "REQUIRED_DIALOG_TAPS = 5",
+        "showKernelDetails(Context context, String fullKernelVersion)",
         'CIT_PACKAGE = "com.miui.cit"',
         'CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity"',
     ):
@@ -40,8 +42,8 @@ if mist_hyper.is_file():
     text = mist_hyper.read_text()
     if MIST_MARKER not in text:
         errors.append("MistOS HyperPreference kernel tap is not patched")
-    if "CitKernelTapLauncher.onKernelVersionTap(context);" not in text:
-        errors.append("MistOS HyperPreference CIT launcher call is missing")
+    if text.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());") != 1:
+        errors.append("MistOS kernel details dialog launcher missing or duplicated")
 else:
     if modern.is_file():
         text = modern.read_text()
@@ -67,4 +69,4 @@ if errors:
         print(f"ERROR: {error}", file=sys.stderr)
     sys.exit(1)
 
-print("MiuiCit Settings five-tap integration: VERIFIED")
+print("MiuiCit Settings integration: VERIFIED")
