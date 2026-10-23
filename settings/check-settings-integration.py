@@ -30,8 +30,8 @@ else:
     text = helper.read_text()
     for needle in (
         "REQUIRED_TAPS = 6",
-        "REQUIRED_DIALOG_TAPS = 5",
-        "showKernelDetails(Context context, String fullKernelVersion)",
+        "REQUIRED_INLINE_TAPS = REQUIRED_TAPS - 1",
+        "installMistKernelTapListener(TextView kernel, String fullKernelVersion)",
         'CIT_PACKAGE = "com.miui.cit"',
         'CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity"',
     ):
@@ -42,8 +42,12 @@ if mist_hyper.is_file():
     text = mist_hyper.read_text()
     if MIST_MARKER not in text:
         errors.append("MistOS HyperPreference kernel tap is not patched")
-    if text.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());") != 1:
-        errors.append("MistOS kernel details dialog launcher missing or duplicated")
+    if text.count("CitKernelTapLauncher.installMistKernelTapListener(kernel, SystemInfoUtils.getFullKernelVersion());") != 1:
+        errors.append("MistOS inline kernel hook missing or duplicated")
+    if "CitKernelTapLauncher.showKernelDetails(" in text:
+        errors.append("MistOS still opens the deprecated dialog")
+    if "kernel.setOnClickListener(new View.OnClickListener()" in text:
+        errors.append("MistOS has a second kernel click listener")
 else:
     if modern.is_file():
         text = modern.read_text()

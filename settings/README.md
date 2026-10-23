@@ -1,51 +1,52 @@
-# Settings integration — MiuiCit via kernel details (MistOS)
+# Settings integration — inline kernel version / MiuiCit (MistOS)
 
-On MistOS Android 17, the first tap on Kernel version opens a dialog showing the full
-kernel version. Five additional taps on the information inside the open dialog
-launch MiuiCit (six total taps). Closing the dialog resets the count; pauses over
-three seconds between dialog taps also reset it. MistOS's existing short/full kernel
-version toggle in the About screen is preserved.
+On MistOS Android 17, the **first tap** on Kernel version expands the full
+kernel information directly in the existing card of the Android version page.
+No dialog is shown. **Five additional taps on that expanded information** open
+MiuiCit (six taps total). The full details stay visible during this sequence.
+Pauses over three seconds restart the five-tap count without hiding the text.
 
-Other ROMs with the standard kernel-version preference retain six direct taps
-on that preference. The secret code `*#*#6484#*#*` is unchanged.
+The listener is stored per TextView binding: leaving and reopening the page
+recreates the listener. The shorter kernel summary is the initial view.
 
-## Why a Settings source hook is required
+Other ROMs using the standard kernel-version preference retain six direct taps.
+The secret code \`*#*#6484#*#*\` is unchanged.
 
-A resource overlay cannot reliably implement "five taps inside the kernel-details dialog" across AOSP-derived ROMs. The click counter therefore lives in a tiny Settings helper and the existing kernel-version controller/binding delegates to it.
+## Why a Settings hook is required
 
-There is deliberately **no compile-time dependency** from Settings to MiuiCit. The launcher uses the explicit component name as strings. This keeps Settings buildable on ROM variants where the app is temporarily omitted.
+MistOS uses \`com.mist.utils.HyperPreference\` for its visible kernel version,
+rather than the standard AOSP kernel preference controller.
 
-## Apply
+The patcher replaces the **entire** MistOS kernel click listener with
+\`CitKernelTapLauncher.installMistKernelTapListener(kernel, SystemInfoUtils.getFullKernelVersion())\`.
+Replacing the old listener, not appending to it, avoids an extra dialog
+and prevents the stock short/full toggle from collapsing the text on later taps.
 
-From the ROM root, with this repository checked out at `packages/apps/MiuiCit`:
+There is no compile-time dependency on MiuiCit: Settings launches the explicit
+MiuiCit component by name.
 
-```bash
-packages/apps/MiuiCit/tools/apply-settings-integration.sh
-```
+## Apply only the Settings integration
 
-The patcher is idempotent; it also upgrades the previously inserted MistOS inline counter.
+From the ROM root with this repository at \`packages/apps/MiuiCit\`:
 
-It supports:
+\`\`\`bash
+packages/apps/MiuiCit/tools/apply-settings-integration.sh packages/apps/Settings
+\`\`\`
 
-1. MistOS Android 17 `com.mist.utils.HyperPreference`.
-2. Current AOSP/Lineage-style `deviceinfo/firmwareversion/KernelVersionPreferenceController.java`.
-2. Current Catalyst `KernelVersionPreference.kt` when present.
-3. The older `deviceinfo/KernelVersionPreferenceController.java` layout as a fallback.
+This is idempotent and migrates the old dialog-based integration in-place.
 
-If a ROM has replaced the AOSP kernel-version screen with a completely different implementation, the script **fails instead of guessing**. A small adapter for that Settings fork can then be added without touching MiuiCit itself.
+Other supported Settings paths remain unchanged:
 
-## Behavior
+1. Modern AOSP/Lineage \`KernelVersionPreferenceController.java\`.
+2. Catalyst \`KernelVersionPreference.kt\`, when present.
+3. Legacy AOSP \`KernelVersionPreferenceController.java\`.
 
-- MistOS: first tap opens the full kernel information dialog; five more taps within it launch MiuiCit.
-- Other ROMs: six consecutive kernel preference taps launch MiuiCit.
-- A gap over 3 seconds resets the active tap sequence.
-- Closing the MistOS dialog cancels its count.
-- Missing MiuiCit is logged without crashing Settings.
+Unrecognized layouts fail rather than changing unrelated code.
 
-## One-command ROM setup
+## Complete ROM setup
 
-```bash
+\`\`\`bash
 packages/apps/MiuiCit/tools/setup-rom.sh device/xiaomi/mondrian/device.mk
-```
+\`\`\`
 
-This validates the MiuiCit tree, adds the product include if missing, and applies/verifies the Settings hook. It is safe to run again.
+Run full setup only when product/framework integration is also required.

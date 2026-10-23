@@ -88,11 +88,19 @@ import android.view.View;
 import com.android.settings.R;
 public class HyperPreference {
     private Context context;
+    private boolean fullKernelVersion = false;
     void bind(android.widget.TextView kernel) {
+        kernel.setText("short");
         kernel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                kernel.setText("full");
+                if (fullKernelVersion) {
+                    kernel.setText("short");
+                    fullKernelVersion = false;
+                } else {
+                    kernel.setText("full");
+                    fullKernelVersion = true;
+                }
             }
         });
     }
@@ -150,8 +158,11 @@ class SettingsIntegrationTest(unittest.TestCase):
 
             hyper = (root / MIST_HYPER).read_text()
             self.assertIn("MiuiCit Mist kernel tap integration", hyper)
-            self.assertIn("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());", hyper)
-            self.assertIn('kernel.setText("full");', hyper)
+            self.assertIn("CitKernelTapLauncher.installMistKernelTapListener(kernel, SystemInfoUtils.getFullKernelVersion());", hyper)
+            self.assertNotIn("CitKernelTapLauncher.showKernelDetails(", hyper)
+            self.assertNotIn("kernel.setOnClickListener(new View.OnClickListener()", hyper)
+            self.assertIn('kernel.setText("short");', hyper)
+            self.assertNotIn("private boolean fullKernelVersion = false;", hyper)
             self.assertEqual(modern_before, (root / MODERN).read_bytes())
             self.assertEqual(catalyst_before, (root / CATALYST).read_bytes())
 
@@ -169,44 +180,54 @@ class SettingsIntegrationTest(unittest.TestCase):
             run(APPLY, root)
             run(CHECK, root)
             text = (root / MIST_HYPER).read_text()
-            self.assertEqual(text.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"), 1)
-            self.assertIn('kernel.setText("full");', text)
-            self.assertLess(
-                text.index("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"),
-                text.index('kernel.setText("full");'),
-            )
-            self.assertEqual(
-                (root / "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java")
-                .read_text().count("REQUIRED_DIALOG_TAPS = 5"), 1,
-            )
+            self.assertEqual(text.count("CitKernelTapLauncher.installMistKernelTapListener(kernel, SystemInfoUtils.getFullKernelVersion());"), 1)
+            self.assertNotIn("kernel.setOnClickListener(new View.OnClickListener()", text)
+            helper = (root / "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java").read_text()
+            self.assertIn("REQUIRED_INLINE_TAPS = REQUIRED_TAPS - 1", helper)
+            self.assertIn("kernel.setText(fullKernelVersion);", helper)
+            self.assertNotIn("AlertDialog", helper)
             before = (root / MIST_HYPER).read_bytes()
             run(APPLY, root)
             self.assertEqual(before, (root / MIST_HYPER).read_bytes())
 
-    def test_mistos_upgrades_previous_inline_counter_to_dialog(self):
+    def test_mistos_upgrades_existing_dialog_listener_without_duplicates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root, MIST_HYPER, mist_fixture())
+            # Simulate the previously installed helper call + original toggle.
+            old = (root / MIST_HYPER).read_text().replace(
+                "                if (fullKernelVersion) {",
+                "                // MiuiCit Mist kernel tap integration\n"
+                "                CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());\n"
+                "                if (fullKernelVersion) {",
+                1,
+            )
+            write(root, MIST_HYPER, old)
+            run(APPLY, root)
+            run(CHECK, root)
+            new = (root / MIST_HYPER).read_text()
+            self.assertEqual(new.count("MiuiCit Mist kernel tap integration"), 1)
+            self.assertEqual(new.count("installMistKernelTapListener("), 1)
+            self.assertNotIn("showKernelDetails(", new)
+            self.assertNotIn("kernel.setOnClickListener(new View.OnClickListener()", new)
+            self.assertNotIn("private boolean fullKernelVersion = false;", new)
+            again = run(APPLY, root)
+            self.assertIn("already applied; no changes", again.stdout)
+
+    def test_mistos_inline_listener_replaces_old_short_full_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(root, MIST_HYPER, mist_fixture())
             run(APPLY, root)
-            target = root / MIST_HYPER
-            old = target.read_text().replace(
-                "CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());",
-                "CitKernelTapLauncher.onKernelVersionTap(context);",
-                1,
-            )
-            target.write_text(old)
-            run(APPLY, root)
             run(CHECK, root)
-            current = target.read_text()
-            self.assertEqual(current.count("MiuiCit Mist kernel tap integration"), 1)
-            self.assertEqual(
-                current.count("CitKernelTapLauncher.showKernelDetails(context, SystemInfoUtils.getFullKernelVersion());"),
-                1,
-            )
-            self.assertNotIn("CitKernelTapLauncher.onKernelVersionTap(context);", current)
-            self.assertIn('kernel.setText("full");', current)
-            second = run(APPLY, root)
-            self.assertIn("already applied; no changes", second.stdout)
+            code = (root / MIST_HYPER).read_text()
+            self.assertIn('kernel.setText("short");', code)
+            self.assertNotIn('kernel.setText("full");', code)
+            self.assertNotIn("fullKernelVersion = false", code)
+            self.assertEqual(code.count("installMistKernelTapListener("), 1)
+            helper = (root / "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java").read_text()
+            self.assertNotIn("AlertDialog", helper)
+            self.assertIn("++additionalTaps == REQUIRED_INLINE_TAPS", helper)
 
     def test_legacy_controller_is_supported(self):
         with tempfile.TemporaryDirectory() as tmp:

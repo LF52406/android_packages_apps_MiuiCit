@@ -6,34 +6,26 @@
 
 package com.android.settings.deviceinfo;
 
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.View;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.android.settings.R;
-
 /**
- * MiuiCit entry points for AOSP/Lineage and MistOS Settings.
- *
- * MistOS: first kernel-version tap opens details; five taps inside the dialog launch CIT.
- * Other Settings implementations retain six taps on the kernel version preference.
+ * MiuiCit integration. MistOS expands kernel details in the existing text view,
+ * then launches CIT on five further taps; other ROMs use six preference taps.
  */
 public final class CitKernelTapLauncher {
-
     private static final String TAG = "CitKernelTapLauncher";
     private static final String CIT_ACTION = "com.miui.cit.MAGIC_NUMBER";
     private static final String CIT_PACKAGE = "com.miui.cit";
     private static final String CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity";
 
     private static final int REQUIRED_TAPS = 6;
-    private static final int REQUIRED_DIALOG_TAPS = 5;
+    private static final int REQUIRED_INLINE_TAPS = REQUIRED_TAPS - 1;
     private static final long MAX_TAP_INTERVAL_MS = 3000L;
 
     private static int sTapCount;
@@ -42,68 +34,55 @@ public final class CitKernelTapLauncher {
     private CitKernelTapLauncher() {}
 
     /**
-     * The opening click is not counted. Only taps inside the details dialog count.
-     * Closing the dialog discards the count instead of keeping hidden global state.
+     * A fresh listener is installed per MistOS kernel TextView binding.
+     * The first tap reveals the full kernel text inline (no dialog); five
+     * additional rapid taps on the expanded text launch CIT.
      */
-    public static void showKernelDetails(Context context, String fullKernelVersion) {
-        final TextView details = new TextView(context);
-        details.setText(fullKernelVersion);
-        details.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        final int padding = (int) (20 * context.getResources()
-                .getDisplayMetrics().density + 0.5f);
-        details.setPadding(padding, padding, padding, padding);
-        details.setMinHeight(padding * 6);
-        details.setClickable(true);
+    public static void installMistKernelTapListener(TextView kernel, String fullKernelVersion) {
+        kernel.setOnClickListener(new View.OnClickListener() {
+            private boolean expanded;
+            private int additionalTaps;
+            private long lastTapElapsedRealtime;
 
-        final ScrollView content = new ScrollView(context);
-        content.setFillViewport(true);
-        content.addView(details);
+            @Override
+            public void onClick(View view) {
+                final long now = SystemClock.elapsedRealtime();
+                if (!expanded) {
+                    kernel.setText(fullKernelVersion);
+                    expanded = true;
+                    additionalTaps = 0;
+                    lastTapElapsedRealtime = now;
+                    return;
+                }
 
-        final AlertDialog dialog = new AlertDialog.Builder(context)
-                .setTitle(R.string.kernel_version)
-                .setView(content)
-                .setPositiveButton(android.R.string.ok, null)
-                .create();
+                if (lastTapElapsedRealtime == 0L
+                        || now - lastTapElapsedRealtime > MAX_TAP_INTERVAL_MS) {
+                    additionalTaps = 0;
+                }
+                lastTapElapsedRealtime = now;
 
-        final int[] dialogTapCount = {0};
-        final long[] lastDialogTap = {0L};
-
-        final View.OnClickListener dialogTap = ignored -> {
-            final long now = SystemClock.elapsedRealtime();
-            if (lastDialogTap[0] == 0
-                    || now - lastDialogTap[0] > MAX_TAP_INTERVAL_MS) {
-                dialogTapCount[0] = 0;
+                // Do not collapse the TextView while the user taps the details.
+                if (++additionalTaps == REQUIRED_INLINE_TAPS) {
+                    additionalTaps = 0;
+                    lastTapElapsedRealtime = 0L;
+                    launchCit(view.getContext());
+                }
             }
-            lastDialogTap[0] = now;
-            dialogTapCount[0]++;
-
-            if (dialogTapCount[0] == REQUIRED_DIALOG_TAPS) {
-                dialog.dismiss();
-                launchCit(context);
-            }
-        };
-
-        // Taps on the kernel text or empty dialog content count; scrolling does not.
-        details.setOnClickListener(dialogTap);
-        content.setOnClickListener(dialogTap);
-        dialog.show();
+        });
     }
 
-    /** Fallback for other ROMs: six clicks on the kernel-version preference. */
+    /** Fallback for non-MistOS Settings: six clicks on the preference. */
     public static synchronized boolean onKernelVersionTap(Context context) {
         final long now = SystemClock.elapsedRealtime();
-
         if (sLastTapElapsedRealtime == 0
                 || now - sLastTapElapsedRealtime > MAX_TAP_INTERVAL_MS) {
             sTapCount = 0;
         }
-
         sLastTapElapsedRealtime = now;
         sTapCount++;
         if (sTapCount < REQUIRED_TAPS) {
             return true;
         }
-
         sTapCount = 0;
         sLastTapElapsedRealtime = 0;
         launchCit(context);

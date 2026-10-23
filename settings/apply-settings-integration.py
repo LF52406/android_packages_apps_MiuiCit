@@ -61,51 +61,73 @@ def insert_before_class_end(text: str, block: str) -> str:
 
 def patch_mist_hyper_preference(path: Path) -> bool:
     text = path.read_text()
-    old_hook = "CitKernelTapLauncher.onKernelVersionTap(context);"
-    new_hook = (
-        "CitKernelTapLauncher.showKernelDetails("
-        "context, SystemInfoUtils.getFullKernelVersion());"
+    hook = (
+        "CitKernelTapLauncher.installMistKernelTapListener("
+        "kernel, SystemInfoUtils.getFullKernelVersion());"
     )
 
-    if MIST_MARKER in text:
-        if text.count(MIST_MARKER) != 1:
-            die(f"duplicate MistOS MiuiCit hook: {path}")
-        if text.count(new_hook) == 1 and old_hook not in text:
+    if hook in text:
+        # Already migrated: never leave behind a second listener or dialog.
+        if (
+            text.count(hook) == 1
+            and text.count(MIST_MARKER) == 1
+            and "CitKernelTapLauncher.showKernelDetails(" not in text
+            and "kernel.setOnClickListener(new View.OnClickListener()" not in text
+        ):
             return False
-        if text.count(old_hook) == 1 and new_hook not in text:
-            # Upgrade an existing inline counter without introducing another listener.
-            path.write_text(text.replace(old_hook, new_hook, 1))
-            return True
-        die(f"unrecognized MistOS MiuiCit hook: {path}")
+        die(f"duplicate or mixed MistOS MiuiCit integration: {path}")
 
-    # The real MistOS kernel TextView uses mixed indentation in Android 17.
+    if text.count(MIST_MARKER) > 1:
+        die(f"duplicate MistOS MiuiCit hooks: {path}")
+
+    # Handle pristine MistOS and the already-deployed dialog / inline-counter
+    # integration. Replace the WHOLE old onClick listener, not just its first
+    # instruction: leaving the original toggle collapses the kernel details.
     anchor = re.compile(
-        r"(?m)^(?P<indent>[ \t]*)kernel\.setOnClickListener\(new View\.OnClickListener\(\) \{[ \t]*\r?\n"
-        r"[ \t]*@Override[ \t]*\r?\n"
-        r"(?P<click_indent>[ \t]*)public void onClick\(View v\) \{[ \t]*\r?\n"
+        r"(?m)^(?P<indent>[ \t]*)kernel\.setOnClickListener\("
+        r"new View\.OnClickListener\(\) \{[ \t]*\r?\n"
     )
     matches = list(anchor.finditer(text))
     if len(matches) != 1:
         die(f"expected one MistOS kernel click listener, found {len(matches)}: {path}")
-    if "CitKernelTapLauncher." in text:
-        die(f"unrecognized existing MiuiCit hook: {path}")
 
-    text = add_java_import(
-        text,
-        "import com.android.settings.deviceinfo.CitKernelTapLauncher;",
+    match = matches[0]
+    closing = re.compile(r"(?m)^[ \t]*\}\);[ \t]*(?:\r?\n|$)").search(
+        text, match.end()
     )
-    match = anchor.search(text)
-    assert match is not None
-    indent = match.group("click_indent") + "    "
-    replacement = (
-        match.group(0)
-        + f"{indent}// {MIST_MARKER}\n"
-        + f"{indent}{new_hook}\n"
+    if closing is None:
+        die(f"cannot locate MistOS kernel listener end: {path}")
+
+    old_listener = text[match.start():closing.end()]
+    if MIST_MARKER in text and MIST_MARKER not in old_listener:
+        die(f"unexpected MistOS marker outside kernel listener: {path}")
+    if not any(
+        token in old_listener
+        for token in (
+            "kernel.setText(",
+            "CitKernelTapLauncher.showKernelDetails(",
+            "CitKernelTapLauncher.onKernelVersionTap(",
+        )
+    ):
+        die(f"unrecognized MistOS kernel listener: {path}")
+
+    indent = match.group("indent")
+    new_listener = (
+        f"{indent}// {MIST_MARKER}\n"
+        f"{indent}{hook}\n"
     )
-    path.write_text(text[:match.start()] + replacement + text[match.end():])
+    updated = text[:match.start()] + new_listener + text[closing.end():]
+
+    # This boolean existed solely for the old short/full text toggle.
+    unused_state = "    private boolean fullKernelVersion = false;\n"
+    if unused_state in updated and updated.count("fullKernelVersion") == 1:
+        updated = updated.replace(unused_state, "", 1)
+
+    updated = add_java_import(
+        updated, "import com.android.settings.deviceinfo.CitKernelTapLauncher;"
+    )
+    path.write_text(updated)
     return True
-
-
 
 def patch_modern_controller(path: Path) -> bool:
     text = path.read_text()
