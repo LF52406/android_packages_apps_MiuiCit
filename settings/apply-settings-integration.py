@@ -9,6 +9,7 @@ Other ROMs fall back to the standard modern/Catalyst or legacy Settings paths.
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -61,28 +62,37 @@ def insert_before_class_end(text: str, block: str) -> str:
 def patch_mist_hyper_preference(path: Path) -> bool:
     text = path.read_text()
     if MIST_MARKER in text:
+        if text.count(MIST_MARKER) != 1:
+            die(f"duplicate MistOS MiuiCit hook: {path}")
         return False
+
+    # MistOS uses mixed tabs/spaces before the visible kernel listener.
+    # Keep the existing formatted/full-kernel toggle; add only the CIT counter.
+    anchor = re.compile(
+        r"(?m)^(?P<indent>[ \t]*)kernel\.setOnClickListener\(new View\.OnClickListener\(\) \{[ \t]*\r?\n"
+        r"[ \t]*@Override[ \t]*\r?\n"
+        r"(?P<click_indent>[ \t]*)public void onClick\(View v\) \{[ \t]*\r?\n"
+    )
+    matches = list(anchor.finditer(text))
+    if len(matches) != 1:
+        die(f"expected one MistOS kernel click listener, found {len(matches)}: {path}")
+    if "CitKernelTapLauncher.onKernelVersionTap" in text:
+        die(f"unrecognized existing MiuiCit hook: {path}")
 
     text = add_java_import(
         text,
         "import com.android.settings.deviceinfo.CitKernelTapLauncher;",
     )
-
-    anchor = """        kernel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-"""
-    if anchor not in text:
-        die(f"cannot locate MistOS kernel click listener: {path}")
-
+    match = anchor.search(text)
+    assert match is not None
+    indent = match.group("click_indent") + "    "
     replacement = (
-        anchor
-        + f"                // {MIST_MARKER}\n"
-        + "                CitKernelTapLauncher.onKernelVersionTap(context);\n"
+        match.group(0)
+        + f"{indent}// {MIST_MARKER}\n"
+        + f"{indent}CitKernelTapLauncher.onKernelVersionTap(context);\n"
     )
-    path.write_text(text.replace(anchor, replacement, 1))
+    path.write_text(text[:match.start()] + replacement + text[match.end():])
     return True
-
 
 def patch_modern_controller(path: Path) -> bool:
     text = path.read_text()

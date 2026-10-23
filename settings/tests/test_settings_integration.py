@@ -158,6 +158,31 @@ class SettingsIntegrationTest(unittest.TestCase):
             second = run(APPLY, root)
             self.assertIn("already applied; no changes", second.stdout)
 
+    def test_mistos_mixed_indentation_preserves_kernel_details(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = mist_fixture().replace(
+                "        kernel.setOnClickListener",
+                "    \tkernel.setOnClickListener",
+            )
+            write(root, MIST_HYPER, fixture)
+            run(APPLY, root)
+            run(CHECK, root)
+            text = (root / MIST_HYPER).read_text()
+            self.assertEqual(text.count("CitKernelTapLauncher.onKernelVersionTap(context);"), 1)
+            self.assertIn('kernel.setText("full");', text)
+            self.assertLess(
+                text.index("CitKernelTapLauncher.onKernelVersionTap(context);"),
+                text.index('kernel.setText("full");'),
+            )
+            self.assertEqual(
+                (root / "src/com/android/settings/deviceinfo/CitKernelTapLauncher.java")
+                .read_text().count("REQUIRED_TAPS = 6"), 1,
+            )
+            before = (root / MIST_HYPER).read_bytes()
+            run(APPLY, root)
+            self.assertEqual(before, (root / MIST_HYPER).read_bytes())
+
     def test_legacy_controller_is_supported(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

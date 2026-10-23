@@ -1,4 +1,4 @@
-# Settings integration — five taps on Kernel version
+# Settings integration — six taps on Kernel version
 
 This integration reproduces the Xiaomi-style entry path without tying MiuiCit to a specific ROM.
 
@@ -9,9 +9,11 @@ Settings
   → About phone
   → Android version / firmware details
   → Kernel version
-  → tap 5 times
+  → tap 6 times
   → com.miui.cit/.home.HomeActivity
 ```
+
+The MistOS About phone kernel row retains its original first-tap formatted/full-version toggle; the counter does not consume or replace that behavior.
 
 The original secret code `*#*#6484#*#*` remains a second entry path.
 
@@ -41,10 +43,10 @@ If a ROM has replaced the AOSP kernel-version screen with a completely different
 
 ## Behavior
 
-- five consecutive taps are required;
+- six consecutive taps are required;
 - a gap longer than 3 seconds resets the sequence;
 - no toast or visible intermediate UI is shown;
-- the fifth tap launches the exported MiuiCit home activity explicitly;
+- the sixth tap launches the exported MiuiCit home activity explicitly;
 - if MiuiCit is missing, Settings does not crash; the failed launch is only logged.
 
 ## One-command ROM setup

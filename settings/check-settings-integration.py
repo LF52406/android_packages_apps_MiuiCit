@@ -29,7 +29,7 @@ if not helper.is_file():
 else:
     text = helper.read_text()
     for needle in (
-        "REQUIRED_TAPS = 5",
+        "REQUIRED_TAPS = 6",
         'CIT_PACKAGE = "com.miui.cit"',
         'CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity"',
     ):

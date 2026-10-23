@@ -13,10 +13,10 @@ import android.os.SystemClock;
 import android.util.Log;
 
 /**
- * Launches Xiaomi CIT after five consecutive taps on the kernel version preference.
+ * Launches Xiaomi CIT after six consecutive taps on the kernel version preference.
  *
  * This class deliberately has no compile-time dependency on MiuiCit. Settings remains buildable
- * even when MiuiCit is not present in a product; on the fifth tap the explicit activity launch
+ * even when MiuiCit is not present in a product; on the sixth tap the explicit activity launch
  * simply fails closed and is logged.
  */
 public final class CitKernelTapLauncher {
@@ -27,7 +27,7 @@ public final class CitKernelTapLauncher {
     private static final String CIT_PACKAGE = "com.miui.cit";
     private static final String CIT_HOME_ACTIVITY = "com.miui.cit.home.HomeActivity";
 
-    private static final int REQUIRED_TAPS = 5;
+    private static final int REQUIRED_TAPS = 6;
     private static final long MAX_TAP_INTERVAL_MS = 3000L;
 
     private static int sTapCount;
@@ -36,7 +36,7 @@ public final class CitKernelTapLauncher {
     private CitKernelTapLauncher() {}
 
     /**
-     * Counts a kernel-version tap and opens CIT on the fifth consecutive tap.
+     * Counts a kernel-version tap and opens CIT on the sixth consecutive tap.
      *
      * A pause longer than MAX_TAP_INTERVAL_MS resets the sequence. The method always consumes the
      * preference click so the kernel row behaves consistently on both classic and Catalyst Settings.
